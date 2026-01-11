@@ -26,26 +26,41 @@ class PropertyGuruScraper:
         }
 
     async def scrape(self, url: str):
-        # Strategy 0: Curl CFFI (Best for Cloudflare TLS Fingerprinting)
-        print(f"Attempting to scrape with Curl Impersonate: {url}")
-        try:
-            from curl_cffi import requests as cffi_requests
-            # Impersonate Chrome 120
-            response = cffi_requests.get(
-                url, 
-                impersonate="chrome120", 
-                headers=self.headers, 
-                timeout=20
-            )
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                data = self._parse_soup(soup)
-                if data["title"] != "No Title" and not data["title"].startswith("[BLOCKED]"):
-                    print("Curl CFFI success!")
-                    return data
-            print(f"Curl CFFI failed (Status {response.status_code})")
-        except Exception as e:
-            print(f"Curl CFFI error: {e}")
+        # Strategy 0: Curl CFFI with Rotation
+        # Try different browser fingerprints to bypass Cloudflare
+        impersonations = [
+            "chrome120", 
+            "safari15_5", 
+            "chrome110",
+            "safari_ios_16_5"
+        ]
+        
+        from curl_cffi import requests as cffi_requests
+        
+        for imp in impersonations:
+            print(f"Attempting to scrape with Curl Impersonate: {imp} on {url}")
+            try:
+                response = cffi_requests.get(
+                    url, 
+                    impersonate=imp, 
+                    headers=self.headers, 
+                    timeout=20
+                )
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    data = self._parse_soup(soup)
+                    if data["title"] != "No Title" and not data["title"].startswith("[BLOCKED]"):
+                        print(f"Curl CFFI success with {imp}!")
+                        return data
+                    else:
+                        print(f"Curl CFFI {imp} was blocked.")
+                else:
+                    print(f"Curl CFFI {imp} failed status {response.status_code}")
+                
+                # Small delay before retry
+                await asyncio.sleep(2)
+            except Exception as e:
+                print(f"Curl CFFI error with {imp}: {e}")
 
         # Strategy 1: Cloudscraper (Legacy fast)
         print(f"Attempting to scrape with Cloudscraper: {url}")
@@ -195,7 +210,7 @@ if __name__ == "__main__":
     import json
     async def test():
         scraper = PropertyGuruScraper()
-        test_url = "https://www.propertyguru.com.sg/listing/for-sale-v-on-shenton-21087075" 
+        test_url = "https://www.propertyguru.com.sg/listing/for-sale-pinetree-hill-24939103" 
         print(f"Testing scraper with URL: {test_url}")
         data = await scraper.scrape(test_url)
         print("\nFinal Result:")
