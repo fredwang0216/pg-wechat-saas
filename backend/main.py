@@ -68,15 +68,31 @@ async def generate_article(request: GenerateRequest, req: Request):
         # 2. Generate content using AI
         article = await ai_service.generate_wechat_article(listing_data, mode=request.mode)
         
-        # 3. Add images to content_html for the editor (via Proxy)
+        # 3. Add images to content_html for the editor (Nuclear Option: Base64 Embedding)
         image_html = '<div class="gallery" style="margin-top: 20px;">'
-        images_to_process = listing_data.get('images', [])[:8]
+        # Limit to 5 images to prevent payload too large errors
+        images_to_process = listing_data.get('images', [])[:5] 
         
+        from curl_cffi import requests as cffi_requests
+        import base64
+
+        print(f"Processing {len(images_to_process)} images with Base64 embedding...")
+
         for img_url in images_to_process:
-            # Use wsrv.nl external image proxy to bypass PropertyGuru CDN blocks
-            # This is more reliable than self-hosted proxy on dirty IPs
-            proxy_url = f"https://wsrv.nl/?url={img_url}"
-            image_html += f'<p style="text-align: center; margin-bottom: 20px;"><img src="{proxy_url}" alt="Property Image" style="max-width: 100%; border-radius: 8px; display: block; margin: 0 auto;" width="600" /></p>'
+            try:
+                # Download image on backend using the passed stealth credentials
+                # Impersonate Chrome 120 so PropertyGuru lets us download
+                img_resp = cffi_requests.get(img_url, impersonate="chrome120", timeout=10)
+                if img_resp.status_code == 200:
+                    b64_data = base64.b64encode(img_resp.content).decode('utf-8')
+                    mime_type = img_resp.headers.get('Content-Type', 'image/jpeg')
+                    src = f"data:{mime_type};base64,{b64_data}"
+                    
+                    image_html += f'<p style="text-align: center; margin-bottom: 20px;"><img src="{src}" alt="Property Image" style="max-width: 100%; border-radius: 8px; display: block; margin: 0 auto;" width="600" /></p>'
+                else:
+                    print(f"Failed to download image {img_url}: {img_resp.status_code}")
+            except Exception as e:
+                print(f"Base64 processing error for {img_url}: {e}")
         
         image_html += '</div>'
         
