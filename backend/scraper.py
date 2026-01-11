@@ -117,6 +117,14 @@ class PropertyGuruScraper:
                             data["price"] = f"{item['offers'].get('priceCurrency', 'SGD')} {item['offers'].get('price', '')}"
                         if "spatialCoverage" in item and isinstance(item["spatialCoverage"], dict):
                             data["address"] = item["spatialCoverage"].get("address", {}).get("streetAddress", data["address"])
+                        
+                        # Extract images from JSON-LD
+                        if "image" in item:
+                            imgs = item["image"]
+                            if isinstance(imgs, str):
+                                data["images"].append(imgs)
+                            elif isinstance(imgs, list):
+                                data["images"].extend(imgs)
             except: continue
 
         # 2. Fallback to CSS Selectors (Refined with reference agent logic)
