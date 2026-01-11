@@ -26,7 +26,28 @@ class PropertyGuruScraper:
         }
 
     async def scrape(self, url: str):
-        # Strategy 1: Cloudscraper (Fast & stealthy)
+        # Strategy 0: Curl CFFI (Best for Cloudflare TLS Fingerprinting)
+        print(f"Attempting to scrape with Curl Impersonate: {url}")
+        try:
+            from curl_cffi import requests as cffi_requests
+            # Impersonate Chrome 120
+            response = cffi_requests.get(
+                url, 
+                impersonate="chrome120", 
+                headers=self.headers, 
+                timeout=20
+            )
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                data = self._parse_soup(soup)
+                if data["title"] != "No Title" and not data["title"].startswith("[BLOCKED]"):
+                    print("Curl CFFI success!")
+                    return data
+            print(f"Curl CFFI failed (Status {response.status_code})")
+        except Exception as e:
+            print(f"Curl CFFI error: {e}")
+
+        # Strategy 1: Cloudscraper (Legacy fast)
         print(f"Attempting to scrape with Cloudscraper: {url}")
         try:
             # cloudscraper is synchronous, but we can run it in a thread or just call it if we don't mind blocking briefly

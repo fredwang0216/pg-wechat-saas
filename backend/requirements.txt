@@ -9,3 +9,4 @@ pydantic
 google-generativeai
 cloudscraper
 playwright-stealth
+curl_cffi
