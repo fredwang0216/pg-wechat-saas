@@ -73,7 +73,9 @@ async def generate_article(request: GenerateRequest, req: Request):
         images_to_process = listing_data.get('images', [])[:8]
         
         for img_url in images_to_process:
-            proxy_url = f"{base_url}/api/proxy-image?url={img_url}"
+            # Use wsrv.nl external image proxy to bypass PropertyGuru CDN blocks
+            # This is more reliable than self-hosted proxy on dirty IPs
+            proxy_url = f"https://wsrv.nl/?url={img_url}"
             image_html += f'<p style="text-align: center; margin-bottom: 20px;"><img src="{proxy_url}" alt="Property Image" style="max-width: 100%; border-radius: 8px; display: block; margin: 0 auto;" width="600" /></p>'
         
         image_html += '</div>'
