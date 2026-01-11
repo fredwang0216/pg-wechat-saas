@@ -11,8 +11,9 @@ class PropertyGuruScraper:
         self.cloud_scraper = cloudscraper.create_scraper(
             browser={
                 'browser': 'chrome',
-                'platform': 'windows',
-                'mobile': False
+                'browser': 'chrome',
+                'platform': 'darwin',
+                'desktop': True
             },
             delay=2
         )
@@ -62,8 +63,16 @@ class PropertyGuruScraper:
             await Stealth().apply_stealth_async(page)
             
             try:
-                await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                await asyncio.sleep(3)
+                await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                
+                # Wait for the challenge to pass (look for the title element)
+                # Cloudflare challenge usually takes 5-10s
+                try:
+                    await page.wait_for_selector('h1', timeout=30000)
+                except:
+                    print("Timeout waiting for h1, might still be challenged.")
+
+                await asyncio.sleep(5) # Extra buffer for images to load
                 # Scroll to trigger lazy loading
                 await page.evaluate("window.scrollBy(0, 800)")
                 await asyncio.sleep(2)
