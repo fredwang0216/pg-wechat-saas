@@ -30,7 +30,15 @@ img_fetcher = cloudscraper.create_scraper()
 async def proxy_image(url: str):
     """Proxy image to bypass hotlinking protection and ensure WeChat can load it."""
     try:
-        response = img_fetcher.get(url, timeout=10)
+        from curl_cffi import requests as cffi_requests
+        
+        # Use curl_cffi to mimic a browser, avoiding CDN blocks on Railway/bot IPs
+        response = cffi_requests.get(
+            url, 
+            impersonate="chrome120", 
+            timeout=15
+        )
+        
         if response.status_code == 200:
             return Response(
                 content=response.content,
