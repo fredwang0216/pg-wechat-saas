@@ -75,24 +75,41 @@ async def generate_article(request: GenerateRequest, req: Request):
         
         from curl_cffi import requests as cffi_requests
         import base64
+        import asyncio
 
         print(f"Processing {len(images_to_process)} images with Base64 embedding...")
 
+        # Rotation logic matches scraper.py
+        impersonations = [
+            "chrome120", 
+            "safari15_5", 
+            "chrome110",
+            "safari_ios_16_5"
+        ]
+
         for img_url in images_to_process:
-            try:
-                # Download image on backend using the passed stealth credentials
-                # Impersonate Chrome 120 so PropertyGuru lets us download
-                img_resp = cffi_requests.get(img_url, impersonate="chrome120", timeout=10)
-                if img_resp.status_code == 200:
-                    b64_data = base64.b64encode(img_resp.content).decode('utf-8')
-                    mime_type = img_resp.headers.get('Content-Type', 'image/jpeg')
-                    src = f"data:{mime_type};base64,{b64_data}"
-                    
-                    image_html += f'<p style="text-align: center; margin-bottom: 20px;"><img src="{src}" alt="Property Image" style="max-width: 100%; border-radius: 8px; display: block; margin: 0 auto;" width="600" /></p>'
-                else:
-                    print(f"Failed to download image {img_url}: {img_resp.status_code}")
-            except Exception as e:
-                print(f"Base64 processing error for {img_url}: {e}")
+            success = False
+            for imp in impersonations:
+                try:
+                    # Download image on backend using the passed stealth credentials
+                    print(f"Trying to DL image {img_url} with {imp}")
+                    img_resp = cffi_requests.get(img_url, impersonate=imp, timeout=10)
+                    if img_resp.status_code == 200:
+                        b64_data = base64.b64encode(img_resp.content).decode('utf-8')
+                        mime_type = img_resp.headers.get('Content-Type', 'image/jpeg')
+                        src = f"data:{mime_type};base64,{b64_data}"
+                        
+                        image_html += f'<p style="text-align: center; margin-bottom: 20px;"><img src="{src}" alt="Property Image" style="max-width: 100%; border-radius: 8px; display: block; margin: 0 auto;" width="600" /></p>'
+                        success = True
+                        break # Stop rotation if successful
+                    else:
+                        print(f"Failed to download image {img_url} with {imp}: {img_resp.status_code}")
+                        await asyncio.sleep(1) # Wait before retry
+                except Exception as e:
+                    print(f"Base64 processing error for {img_url} with {imp}: {e}")
+            
+            if not success:
+               print(f"Could not download {img_url} with any fingerprint.")
         
         image_html += '</div>'
         
