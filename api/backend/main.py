@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from scraper import PropertyGuruScraper
-from ai_service import AIService
+from .scraper import PropertyGuruScraper
+from .ai_service import AIService
 import uvicorn
 import os
 
