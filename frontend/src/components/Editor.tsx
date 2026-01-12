@@ -75,7 +75,7 @@ const Editor: React.FC<EditorProps> = ({ content, title, mode }) => {
         setGeneratingPoster(true)
 
         try {
-            const response = await fetch('http://localhost:8001/api/generate-poster', {
+            const response = await fetch('/api/generate-poster', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

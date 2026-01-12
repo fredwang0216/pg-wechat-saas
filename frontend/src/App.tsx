@@ -4,7 +4,7 @@ import Editor from './components/Editor'
 import { Link, Sparkles, Loader2, AlertCircle } from 'lucide-react'
 
 // Adjust base URL if needed (e.g., from environment variables)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.30:8001'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 function App() {
     const [url, setUrl] = useState('')
@@ -24,7 +24,7 @@ function App() {
         setError(null)
 
         try {
-            const response = await axios.post(`${API_BASE_URL}/api/generate`, { url, mode })
+            const response = await axios.post(`/api/generate`, { url, mode })
             setArticle(response.data)
         } catch (err: any) {
             console.error(err)
