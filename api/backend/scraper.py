@@ -75,82 +75,89 @@ class PropertyGuruScraper:
             "chrome120",
         ]
         
-        from curl_cffi import requests as cffi_requests
-        
-        for imp in impersonations:
-            print(f"Attempting fallback with Curl Impersonate: {imp}")
-            try:
-                await asyncio.sleep(1)
-                response = cffi_requests.get(
-                    url, 
-                    impersonate=imp, 
-                    headers=self.headers, 
-                    timeout=20
-                )
-                if response.status_code == 200:
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    data = self._parse_soup(soup)
-                    if data["title"] != "No Title" and not data["title"].startswith("[BLOCKED]"):
-                        print(f"Curl CFFI success with {imp}!")
-                        return data
+        try:
+             from curl_cffi import requests as cffi_requests
+             
+             for imp in impersonations:
+                print(f"Attempting fallback with Curl Impersonate: {imp}")
+                try:
+                    await asyncio.sleep(1)
+                    response = cffi_requests.get(
+                        url, 
+                        impersonate=imp, 
+                        headers=self.headers, 
+                        timeout=20
+                    )
+                    if response.status_code == 200:
+                        soup = BeautifulSoup(response.text, 'html.parser')
+                        data = self._parse_soup(soup)
+                        if data["title"] != "No Title" and not data["title"].startswith("[BLOCKED]"):
+                            print(f"Curl CFFI success with {imp}!")
+                            return data
+                        else:
+                            print(f"Curl CFFI {imp} was blocked.")
                     else:
-                        print(f"Curl CFFI {imp} was blocked.")
-                else:
-                    print(f"Curl CFFI {imp} failed status {response.status_code}")
-                
-                # Small delay before retry
-                await asyncio.sleep(2)
-            except Exception as e:
-                print(f"Curl CFFI error with {imp}: {e}")
+                        print(f"Curl CFFI {imp} failed status {response.status_code}")
+                    
+                    # Small delay before retry
+                    await asyncio.sleep(2)
+                except Exception as e:
+                    print(f"Curl CFFI error with {imp}: {e}")
+        except ImportError:
+             print("Curl CFFI not available, skipping Strategy 1.")
 
         # Strategy 2: Playwright (Headed + Stealth fallback)
         print("Falling back to Playwright...")
-        from playwright.async_api import async_playwright
-        from playwright_stealth import Stealth
+        try:
+            from playwright.async_api import async_playwright
+            from playwright_stealth import Stealth
         
-        async with async_playwright() as p:
-            import tempfile
-            user_data_dir = os.path.join(tempfile.gettempdir(), "pg_scraper_user_data_v2")
-            
-            context = await p.chromium.launch_persistent_context(
-                user_data_dir,
-                headless=True, # Try headless first with stealth
-                args=['--disable-blink-features=AutomationControlled', '--no-sandbox'],
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-            )
-            
-            page = await context.new_page()
-            await Stealth().apply_stealth_async(page)
-            
-            try:
-                await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            async with async_playwright() as p:
+                import tempfile
+                user_data_dir = os.path.join(tempfile.gettempdir(), "pg_scraper_user_data_v2")
                 
-                # Wait for the challenge to pass (look for the title element)
-                # Cloudflare challenge usually takes 5-10s
+                context = await p.chromium.launch_persistent_context(
+                    user_data_dir,
+                    headless=True, # Try headless first with stealth
+                    args=['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+                )
+                
+                page = await context.new_page()
+                await Stealth().apply_stealth_async(page)
+                
                 try:
-                    await page.wait_for_selector('h1', timeout=30000)
-                except:
-                    print("Timeout waiting for h1, might still be challenged.")
+                    await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                    
+                    # Wait for the challenge to pass (look for the title element)
+                    # Cloudflare challenge usually takes 5-10s
+                    try:
+                        await page.wait_for_selector('h1', timeout=30000)
+                    except:
+                        print("Timeout waiting for h1, might still be challenged.")
 
-                # Scroll to trigger lazy loading
-                await page.evaluate("window.scrollBy(0, 800)")
-                await asyncio.sleep(2)
-                
-                # Explicit wait for images (Reference Agent Logic)
-                try:
-                    await page.wait_for_selector('img', timeout=10000)
-                except:
-                    print("Timeout waiting for images")
-                
-                content = await page.content()
-                soup = BeautifulSoup(content, 'html.parser')
-                data = self._parse_soup(soup)
-                return data
-            except Exception as e:
-                print(f"Playwright fallback error: {e}")
-                return {"title": "Error: Scraper blocked", "price": "", "address": "", "description": "", "images": []}
-            finally:
-                await context.close()
+                    # Scroll to trigger lazy loading
+                    await page.evaluate("window.scrollBy(0, 800)")
+                    await asyncio.sleep(2)
+                    
+                    # Explicit wait for images (Reference Agent Logic)
+                    try:
+                        await page.wait_for_selector('img', timeout=10000)
+                    except:
+                        print("Timeout waiting for images")
+                    
+                    content = await page.content()
+                    soup = BeautifulSoup(content, 'html.parser')
+                    data = self._parse_soup(soup)
+                    return data
+                except Exception as e:
+                    print(f"Playwright fallback error: {e}")
+                    return {"title": "Error: Scraper blocked", "price": "", "address": "", "description": "", "images": []}
+                finally:
+                    await context.close()
+        except ImportError:
+             print("Playwright not installed, skipping Strategy 2.")
+             return {"title": "Error: Scraper strategies exhausted", "price": "", "description": "Could not scrape listing (Playwright missing).", "images": []}
 
     def _parse_soup(self, soup):
         data = {

@@ -128,7 +128,11 @@ class PosterRequest(BaseModel):
 async def generate_poster(request: PosterRequest):
     """Render the provided HTML into a long poster image using Playwright."""
     try:
-        from playwright.async_api import async_playwright
+        try:
+            from playwright.async_api import async_playwright
+        except ImportError:
+            raise HTTPException(status_code=500, detail="Poster generation is not supported in this environment (missing Playwright).")
+            
         import traceback
         
         print(f"Generating poster for title: {request.title}, HTML length: {len(request.html)}")
