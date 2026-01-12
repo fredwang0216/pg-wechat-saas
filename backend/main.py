@@ -127,131 +127,139 @@ class PosterRequest(BaseModel):
 @app.post("/api/generate-poster")
 async def generate_poster(request: PosterRequest):
     """Render the provided HTML into a long poster image using Playwright."""
-    from playwright.async_api import async_playwright
-    
-    # Wrap HTML in a mobile-optimized poster template
-    full_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap');
-            body {{
-                margin: 0;
-                padding: 0;
-                background-color: #f8fafc;
-                font-family: 'Noto Sans SC', sans-serif;
-                color: #1e293b;
-            }}
-            .poster {{
-                width: 375px; /* Standard mobile width */
-                background-color: white;
-                margin: 0 auto;
-                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            }}
-            .header {{
-                padding: 40px 24px;
-                background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-                color: white;
-                text-align: center;
-            }}
-            .header h1 {{
-                margin: 0;
-                font-size: 24px;
-                font-weight: 700;
-                line-height: 1.3;
-            }}
-            .content {{
-                padding: 24px;
-                line-height: 1.6;
-                font-size: 15px;
-            }}
-            .content h1, .content h2 {{
-                color: #4f46e5;
-                font-size: 20px;
-                border-left: 4px solid #4f46e5;
-                padding-left: 12px;
-                margin-top: 24px;
-            }}
-            .content p {{
-                margin-bottom: 16px;
-                color: #475569;
-            }}
-            .content ul {{
-                padding-left: 20px;
-                color: #475569;
-            }}
-            .content li {{
-                margin-bottom: 8px;
-            }}
-            .content img {{
-                max-width: 100%;
-                border-radius: 12px;
-                margin-bottom: 16px;
-                display: block;
-            }}
-            .footer {{
-                padding: 30px 24px;
-                background-color: #f1f5f9;
-                text-align: center;
-                border-top: 1px solid #e2e8f0;
-            }}
-            .footer p {{
-                margin: 0;
-                font-size: 13px;
-                color: #94a3b8;
-            }}
-            .footer-logo {{
-                font-weight: 700;
-                color: #4f46e5;
-                font-size: 18px;
-                margin-bottom: 8px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="poster">
-            <div class="header">
-                <h1>{request.title}</h1>
-            </div>
-            <div class="content">
-                {request.html}
-            </div>
-            <div class="footer">
-                <div class="footer-logo">PropertyGuru to WeChat</div>
-                <p>扫描或长按识别二维码关注更多优质房源</p>
-                <!-- Space for QR code/Watermark -->
-                <div style="width: 80px; height: 80px; background: #ddd; margin: 20px auto 0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666;">QR CODE</div>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        await page.set_viewport_size({"width": 375, "height": 800}) # Initial height, will grow
-        await page.set_content(full_html)
+    try:
+        from playwright.async_api import async_playwright
+        import traceback
         
-        # Wait for images to load if any
-        await page.wait_for_timeout(2000)
-        
-        # Capture the full page height
-        element = await page.query_selector('.poster')
-        if not element:
-            raise HTTPException(status_code=500, detail="Poster element not found")
-            
-        bounding_box = await element.bounding_box()
-        if not bounding_box:
-             raise HTTPException(status_code=500, detail="Poster element invisible")
+        print(f"Generating poster for title: {request.title}, HTML length: {len(request.html)}")
 
-        screenshot = await element.screenshot(type='png')
-        await browser.close()
+        # Wrap HTML in a mobile-optimized poster template
+        full_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap');
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    background-color: #f8fafc;
+                    font-family: 'Noto Sans SC', sans-serif;
+                    color: #1e293b;
+                }}
+                .poster {{
+                    width: 375px; /* Standard mobile width */
+                    background-color: white;
+                    margin: 0 auto;
+                    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+                }}
+                .header {{
+                    padding: 40px 24px;
+                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                    color: white;
+                    text-align: center;
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 24px;
+                    font-weight: 700;
+                    line-height: 1.3;
+                }}
+                .content {{
+                    padding: 24px;
+                    line-height: 1.6;
+                    font-size: 15px;
+                }}
+                .content h1, .content h2 {{
+                    color: #4f46e5;
+                    font-size: 20px;
+                    border-left: 4px solid #4f46e5;
+                    padding-left: 12px;
+                    margin-top: 24px;
+                }}
+                .content p {{
+                    margin-bottom: 16px;
+                    color: #475569;
+                }}
+                .content ul {{
+                    padding-left: 20px;
+                    color: #475569;
+                }}
+                .content li {{
+                    margin-bottom: 8px;
+                }}
+                .content img {{
+                    max-width: 100%;
+                    border-radius: 12px;
+                    margin-bottom: 16px;
+                    display: block;
+                }}
+                .footer {{
+                    padding: 30px 24px;
+                    background-color: #f1f5f9;
+                    text-align: center;
+                    border-top: 1px solid #e2e8f0;
+                }}
+                .footer p {{
+                    margin: 0;
+                    font-size: 13px;
+                    color: #94a3b8;
+                }}
+                .footer-logo {{
+                    font-weight: 700;
+                    color: #4f46e5;
+                    font-size: 18px;
+                    margin-bottom: 8px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="poster">
+                <div class="header">
+                    <h1>{request.title}</h1>
+                </div>
+                <div class="content">
+                    {request.html}
+                </div>
+                <div class="footer">
+                    <div class="footer-logo">PropertyGuru to WeChat</div>
+                    <p>扫描或长按识别二维码关注更多优质房源</p>
+                    <!-- Space for QR code/Watermark -->
+                    <div style="width: 80px; height: 80px; background: #ddd; margin: 20px auto 0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666;">QR CODE</div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
         
-        return Response(content=screenshot, media_type="image/png")
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(args=['--no-sandbox', '--disable-setuid-sandbox'])
+            page = await browser.new_page()
+            await page.set_viewport_size({"width": 375, "height": 800}) # Initial height, will grow
+            await page.set_content(full_html)
+            
+            # Wait for images to load if any
+            await page.wait_for_timeout(2000)
+            
+            # Capture the full page height
+            element = await page.query_selector('.poster')
+            if not element:
+                 raise Exception("Poster element not found")
+                
+            screenshot = await element.screenshot(type='png')
+            await browser.close()
+            
+            return Response(content=screenshot, media_type="image/png")
+
+    except Exception as e:
+        error_msg = f"Poster generation error: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        # Write to file for debugging
+        with open("poster_error.log", "w") as f:
+            f.write(error_msg)
+        raise HTTPException(status_code=500, detail=f"Poster generation failed: {str(e)}")
 
 @app.get("/health")
 def health_check():
