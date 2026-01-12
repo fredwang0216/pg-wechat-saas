@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-playwright
 openai
 beautifulsoup4
 requests
@@ -8,5 +7,3 @@ python-dotenv
 pydantic
 google-generativeai
 cloudscraper
-playwright-stealth
-curl_cffi
