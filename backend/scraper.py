@@ -19,20 +19,20 @@ class PropertyGuruScraper:
         )
         self.headers = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Referer': 'https://www.propertyguru.com.sg/',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.google.com/',
             'DNT': '1',
             'Upgrade-Insecure-Requests': '1',
         }
 
     async def scrape(self, url: str):
-        # Strategy 0: Curl CFFI with Rotation
-        # Try different browser fingerprints to bypass Cloudflare
+        # Strategy 0: Curl CFFI with Rotation (Mobile First)
+        # Mobile UAs often get lighter challenges
         impersonations = [
-            "chrome120", 
-            "safari15_5", 
-            "chrome110",
-            "safari_ios_16_5"
+            "safari_ios_16_5",  # iPhone - Prioritize Mobile
+            "chrome120",        # Desktop newest
+            "safari15_5",       # Mac
+            "chrome110",        # Desktop older
         ]
         
         from curl_cffi import requests as cffi_requests
@@ -40,6 +40,9 @@ class PropertyGuruScraper:
         for imp in impersonations:
             print(f"Attempting to scrape with Curl Impersonate: {imp} on {url}")
             try:
+                # Add random sleep to prevent burst detection
+                await asyncio.sleep(1)
+                
                 response = cffi_requests.get(
                     url, 
                     impersonate=imp, 

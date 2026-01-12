@@ -79,12 +79,12 @@ async def generate_article(request: GenerateRequest, req: Request):
 
         print(f"Processing {len(images_to_process)} images with Base64 embedding...")
 
-        # Rotation logic matches scraper.py
+        # Rotation logic matches scraper.py (Mobile First)
         impersonations = [
+            "safari_ios_16_5", 
             "chrome120", 
             "safari15_5", 
-            "chrome110",
-            "safari_ios_16_5"
+            "chrome110"
         ]
 
         for img_url in images_to_process:
