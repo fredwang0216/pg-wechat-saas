@@ -1,34 +1,9 @@
 {
     "framework": "vite",
-    "builds": [
+    "rewrites": [
         {
-            "src": "index.py",
-            "use": "@vercel/python"
-        },
-        {
-            "src": "test_health.py",
-            "use": "@vercel/python"
-        },
-        {
-            "src": "package.json",
-            "use": "@vercel/static-build",
-            "config": {
-                "distDir": "frontend/dist"
-            }
-        }
-    ],
-    "routes": [
-        {
-            "src": "/api/test_health",
-            "dest": "/test_health.py"
-        },
-        {
-            "src": "/api/(.*)",
-            "dest": "/index.py"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/frontend/dist/$1"
+            "source": "/api/(.*)",
+            "destination": "/api/index.py"
         }
     ]
 }
