@@ -108,10 +108,15 @@ class PropertyGuruScraper:
                 except:
                     print("Timeout waiting for h1, might still be challenged.")
 
-                await asyncio.sleep(5) # Extra buffer for images to load
                 # Scroll to trigger lazy loading
                 await page.evaluate("window.scrollBy(0, 800)")
                 await asyncio.sleep(2)
+                
+                # Explicit wait for images (Reference Agent Logic)
+                try:
+                    await page.wait_for_selector('img', timeout=10000)
+                except:
+                    print("Timeout waiting for images")
                 
                 content = await page.content()
                 soup = BeautifulSoup(content, 'html.parser')
@@ -132,11 +137,30 @@ class PropertyGuruScraper:
             "images": []
         }
 
-        # Check for block
+        # Check for block (Strict)
         page_text = soup.get_text()
-        if "Just a moment" in page_text or "Access Denied" in page_text:
-            data["title"] = "[BLOCKED] Bot Protection Detected"
-            return data
+        block_keywords = [
+            "Just a moment", 
+            "Access Denied", 
+            "Bot Protection Detected",
+            "Checking your browser",
+            "Attention Required",
+            "Cloudflare"
+        ]
+        
+        # Check title first
+        title_tag = soup.find("title")
+        if title_tag:
+            title_text = title_tag.get_text()
+            if any(k.lower() in title_text.lower() for k in block_keywords):
+                 data["title"] = "[BLOCKED] Bot Protection Detected"
+                 return data
+
+        # Check strict keywords in body only if title is missing or suspicious
+        if any(k in page_text for k in block_keywords) and len(page_text) < 2000:
+             # Assume it's a block page if it's short and contains keywords
+             data["title"] = "[BLOCKED] Bot Protection Detected"
+             return data
 
         # 1. Try JSON-LD or NEXT_DATA first (Internal Logic)
         # (Keeping the robust logic from previous step)
@@ -210,7 +234,7 @@ if __name__ == "__main__":
     import json
     async def test():
         scraper = PropertyGuruScraper()
-        test_url = "https://www.propertyguru.com.sg/listing/for-sale-pinetree-hill-24939103" 
+        test_url = "https://www.propertyguru.com.sg/listing/for-sale-viva-vista-500010094" 
         print(f"Testing scraper with URL: {test_url}")
         data = await scraper.scrape(test_url)
         print("\nFinal Result:")
