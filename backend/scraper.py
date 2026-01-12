@@ -26,23 +26,61 @@ class PropertyGuruScraper:
         }
 
     async def scrape(self, url: str):
-        # Strategy 0: Curl CFFI with Rotation (Mobile First)
-        # Mobile UAs often get lighter challenges
+        # Strategy 0: Cloudscraper (Reference Agent Style - Primary)
+        # The user's reference code uses cloudscraper with Windows/Chrome
+        print(f"Attempting to scrape with Cloudscraper (Reference Config): {url}")
+        try:
+            # Re-create scraper with exact reference params
+            # Reference: browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
+            cs = cloudscraper.create_scraper(
+                browser={
+                    'browser': 'chrome',
+                    'platform': 'windows',
+                    'mobile': False
+                },
+                delay=2
+            )
+            
+            # Reference Headers
+            ref_headers = {
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Referer': 'https://www.propertyguru.com.sg/',
+                'DNT': '1',
+            }
+            
+            response = cs.get(url, headers=ref_headers, timeout=15)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                data = self._parse_soup(soup)
+                
+                # Verify it's not blocked
+                if data["title"] != "No Title" and not data["title"].startswith("[BLOCKED]"):
+                    print("Cloudscraper success!")
+                    return data
+                else:
+                    print(f"Cloudscraper blocked. Title: {data['title']}")
+            else:
+                 print(f"Cloudscraper failed (Status {response.status_code}).")
+                 
+        except Exception as e:
+            print(f"Cloudscraper error: {e}")
+
+        # Strategy 1: Curl CFFI (Fallback)
+        # ... (Previous Curl Logic as fallback) ...
         impersonations = [
-            "safari_ios_16_5",  # iPhone - Prioritize Mobile
-            "chrome120",        # Desktop newest
-            "safari15_5",       # Mac
-            "chrome110",        # Desktop older
+            "safari_ios_16_5", 
+            "chrome120",
         ]
         
         from curl_cffi import requests as cffi_requests
         
         for imp in impersonations:
-            print(f"Attempting to scrape with Curl Impersonate: {imp} on {url}")
+            print(f"Attempting fallback with Curl Impersonate: {imp}")
             try:
-                # Add random sleep to prevent burst detection
                 await asyncio.sleep(1)
-                
                 response = cffi_requests.get(
                     url, 
                     impersonate=imp, 
@@ -64,23 +102,6 @@ class PropertyGuruScraper:
                 await asyncio.sleep(2)
             except Exception as e:
                 print(f"Curl CFFI error with {imp}: {e}")
-
-        # Strategy 1: Cloudscraper (Legacy fast)
-        print(f"Attempting to scrape with Cloudscraper: {url}")
-        try:
-            # cloudscraper is synchronous, but we can run it in a thread or just call it if we don't mind blocking briefly
-            # Since this is a small FastAPI app, we'll use loop.run_in_executor for better performance if needed, 
-            # but for now, simple call.
-            response = self.cloud_scraper.get(url, headers=self.headers, timeout=15)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                data = self._parse_soup(soup)
-                if data["title"] != "No Title" and not data["title"].startswith("[BLOCKED]"):
-                    print("Cloudscraper success!")
-                    return data
-            print(f"Cloudscraper failed (Status {response.status_code}).")
-        except Exception as e:
-            print(f"Cloudscraper error: {e}")
 
         # Strategy 2: Playwright (Headed + Stealth fallback)
         print("Falling back to Playwright...")
