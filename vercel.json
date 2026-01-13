@@ -1,9 +1,6 @@
 {
-    "framework": "vite",
-    "rewrites": [
-        {
-            "source": "/api/(.*)",
-            "destination": "/api/index.py"
-        }
-    ]
+    "buildCommand": "cd frontend && npm install && npm run build",
+    "devCommand": "cd frontend && npm run dev",
+    "outputDirectory": "frontend/dist",
+    "framework": "vite"
 }
